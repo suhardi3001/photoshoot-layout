@@ -3,93 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Photo Planner</title>
+    <title>Open Group Photo Planner</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; }
-        body { font-family: system-ui, sans-serif; background: var(--bg); padding: 20px; color: #1e293b; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 2rem; }
+        :root { --primary: #2563eb; --secondary: #64748b; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); padding: 20px; color: #1e293b; line-height: 1.6; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 2rem; border: 1px solid #e2e8f0; }
         
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-        .input-group { display: flex; flex-direction: column; gap: 0.5rem; }
-        input { padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+        .group-selector { background: #eff6ff; padding: 1rem; border-radius: 8px; border: 1px solid #bfdbfe; display: flex; gap: 10px; align-items: center; }
         
-        button { background: var(--primary); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 1rem; }
-        button:hover { opacity: 0.9; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.2rem; }
+        .input-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        label { font-size: 0.85rem; font-weight: 600; color: #475569; }
+        input { padding: 0.7rem; border: 1px solid #cbd5e1; border-radius: 6px; transition: border 0.2s; }
+        input:focus { outline: none; border-color: var(--primary); ring: 2px solid #3b82f633; }
+        
+        .btn { padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; border: none; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: white; border: 1px solid #cbd5e1; color: var(--secondary); }
+        .btn-success { background: #059669; color: white; }
 
-        /* Photo Stage */
+        /* Photo Stage Rendering */
         #photo-stage { 
             position: relative; 
             width: 100%; 
-            height: 600px; 
-            background: #e2e8f0; 
-            border-bottom: 10px solid #64748b;
-            overflow: hidden;
+            height: 550px; 
+            background: linear-gradient(to bottom, #f1f5f9, #cbd5e1); 
+            border-bottom: 15px solid #475569;
+            overflow-x: auto;
             display: flex;
             align-items: flex-end;
             justify-content: center;
+            border-radius: 8px;
         }
 
-        .person {
-            position: absolute;
-            bottom: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: all 0.5s ease;
-        }
-
-        .body { background: #3b82f6; border: 1px solid #1d4ed8; border-radius: 4px 4px 0 0; }
-        .head { background: #ffdbac; border: 1px solid #d2b48c; border-radius: 50%; margin-bottom: -5px; z-index: 2; }
-        .label { font-size: 10px; background: rgba(255,255,255,0.8); padding: 2px; position: absolute; top: -20px; white-space: nowrap; }
+        .person { position: absolute; bottom: 0; display: flex; flex-direction: column; align-items: center; transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .body { background: #3b82f6; border: 1px solid #1d4ed8; border-radius: 6px 6px 0 0; position: relative; }
+        .head { background: #ffdbac; border: 1px solid #d2b48c; border-radius: 50%; z-index: 2; margin-bottom: -4px; }
+        .label { font-size: 11px; font-weight: bold; background: rgba(255,255,255,0.9); padding: 1px 4px; position: absolute; top: -25px; border-radius: 3px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
-        .row-marker { position: absolute; width: 100%; border-top: 2px dashed #94a3b8; color: #64748b; font-size: 12px; text-align: right; }
+        .row-marker { position: absolute; width: 100%; border-top: 2px dashed rgba(100, 116, 139, 0.3); color: #64748b; font-size: 11px; text-align: left; padding-left: 10px; pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📸 Group Photo Organizer</h2>
+    <div class="header-flex">
+        <h2>📸 Smart Group Photo</h2>
+        <div class="group-selector">
+            <label>Group ID:</label>
+            <input type="text" id="groupCode" placeholder="e.g. Class-2026" value="Default" onchange="generateLayout()">
+            <button class="btn btn-outline" onclick="generateLayout()">View Group</button>
+        </div>
+    </div>
     
     <div class="card">
-        <h3>Add Participant</h3>
+        <h3>Add Your Measurements</h3>
         <form id="dataForm" class="form-grid">
             <div class="input-group">
                 <label>Name</label>
-                <input type="text" id="name" required placeholder="Full Name">
+                <input type="text" id="name" required placeholder="Your Name">
             </div>
             <div class="input-group">
                 <label>Height (cm)</label>
-                <input type="number" id="height" required value="170">
+                <input type="number" id="height" required value="170" min="50" max="250">
             </div>
             <div class="input-group">
                 <label>Face Width (cm)</label>
-                <input type="number" id="face_width" required value="15">
+                <input type="number" id="face_width" required value="16" min="10" max="30">
             </div>
             <div class="input-group">
                 <label>Face Length (cm)</label>
-                <input type="number" id="face_length" required value="20">
+                <input type="number" id="face_length" required value="22" min="10" max="40">
             </div>
             <div class="input-group">
-                <label>Body Width (cm)</label>
-                <input type="number" id="body_width" required value="45">
+                <label>Shoulder Width (cm)</label>
+                <input type="number" id="body_width" required value="45" min="20" max="100">
             </div>
-            <button type="submit">Save to Database</button>
+            <div style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Join Photo</button>
+            </div>
         </form>
     </div>
 
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3>Auto-Layout (4 Rows with Stairs)</h3>
-            <button onclick="generateLayout()" style="background: #059669;">Refresh Layout</button>
+        <div class="header-flex">
+            <h3>Layout Preview (4-Step Elevation)</h3>
+            <span id="memberCount" style="color: var(--secondary); font-size: 0.9rem;">0 people</span>
         </div>
-        <p><small>*Sorted: Shortest in front (Row 1), Tallest in back (Row 4). Each row +10cm elevation.</small></p>
         <div id="photo-stage">
-            <div class="row-marker" style="bottom: 0px;">Row 1 (+0cm)</div>
-            <div class="row-marker" style="bottom: 10px;">Row 2 (+10cm)</div>
-            <div class="row-marker" style="bottom: 20px;">Row 3 (+20cm)</div>
-            <div class="row-marker" style="bottom: 30px;">Row 4 (+30cm)</div>
+            <div class="row-marker" style="bottom: 0px;">Step 1 (0cm)</div>
+            <div class="row-marker" style="bottom: 20px;">Step 2 (+10cm)</div>
+            <div class="row-marker" style="bottom: 40px;">Step 3 (+20cm)</div>
+            <div class="row-marker" style="bottom: 60px;">Step 4 (+30cm)</div>
         </div>
     </div>
 </div>
@@ -106,18 +115,21 @@
     // --- SAVE DATA ---
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const group = document.getElementById('groupCode').value.trim();
+        if(!group) return alert("Please enter a Group ID first");
+
         const data = {
             name: document.getElementById('name').value,
             height: parseFloat(document.getElementById('height').value),
             face_width: parseFloat(document.getElementById('face_width').value),
             face_length: parseFloat(document.getElementById('face_length').value),
-            body_width: parseFloat(document.getElementById('body_width').value)
+            body_width: parseFloat(document.getElementById('body_width').value),
+            group_code: group // Added group logic
         };
 
         const { error } = await supabase.from('participants').insert([data]);
         if (error) alert("Error: " + error.message);
         else {
-            alert("Saved!");
             form.reset();
             generateLayout();
         }
@@ -125,18 +137,25 @@
 
     // --- LAYOUT LOGIC ---
     async function generateLayout() {
-        const { data: people, error } = await supabase.from('participants').select('*');
-        if (error) return console.error(error);
+        const group = document.getElementById('groupCode').value.trim();
+        const { data: people, error } = await supabase
+            .from('participants')
+            .select('*')
+            .eq('group_code', group); // Only fetch this group's people
 
-        // 1. Sort by height (Tallest at the back/top of array)
+        if (error) return console.error(error);
+        document.getElementById('memberCount').innerText = `${people.length} people in ${group}`;
+
+        // 1. Sort by height: Tallest people in the back (higher indices)
+        // This ensures when we split into rows, tallest go to Row 4
         people.sort((a, b) => a.height - b.height);
 
-        // Clear stage (keep markers)
+        // Clear stage
         const markers = stage.querySelectorAll('.row-marker');
         stage.innerHTML = '';
         markers.forEach(m => stage.appendChild(m));
 
-        // 2. Split into 4 rows
+        // 2. Split into 4 rows (Row 0 = Front, Row 3 = Back)
         const rows = [[], [], [], []];
         const countPerRow = Math.ceil(people.length / 4);
         
@@ -145,31 +164,29 @@
             if(rowIndex < 4) rows[rowIndex].push(person);
         });
 
-        // 3. Render each row
-        rows.forEach((rowPeople, rowIndex) => {
-            const rowElevation = rowIndex * 10; // 10cm stair increment
-            const rowWidth = rowPeople.reduce((sum, p) => sum + p.body_width, 0);
-            let currentX = (stage.offsetWidth - rowWidth) / 2; // Center the row
+        const scale = 2; // 1cm = 2px
+
+        // 3. Render rows from BACK to FRONT (for correct CSS layering)
+        for (let r = 3; r >= 0; r--) {
+            const rowPeople = rows[r];
+            const rowElevation = r * 10; // 10cm step
+            
+            const totalRowWidth = rowPeople.reduce((sum, p) => sum + (p.body_width * scale), 0);
+            let currentX = (stage.offsetWidth - totalRowWidth) / 2;
 
             rowPeople.forEach(person => {
                 const personDiv = document.createElement('div');
                 personDiv.className = 'person';
-                // Higher Z-index for front rows (Row 0 is front)
-                personDiv.style.zIndex = 10 - rowIndex; 
+                personDiv.style.zIndex = 10 - r; // Front rows have higher z-index
                 
-                // Position logic
-                // Scaling: 1cm = 2px for visual clarity
-                const scale = 2; 
                 personDiv.style.left = `${currentX}px`;
                 personDiv.style.bottom = `${rowElevation * scale}px`;
 
-                // Head
                 const head = document.createElement('div');
                 head.className = 'head';
                 head.style.width = `${person.face_width * scale}px`;
                 head.style.height = `${person.face_length * scale}px`;
 
-                // Body
                 const body = document.createElement('div');
                 body.className = 'body';
                 body.style.width = `${person.body_width * scale}px`;
@@ -184,12 +201,12 @@
                 personDiv.appendChild(body);
                 stage.appendChild(personDiv);
 
-                currentX += (person.body_width * scale) + 5; // 5px padding between people
+                currentX += (person.body_width * scale);
             });
-        });
+        }
     }
 
-    // Load on start
+    // Initial load
     generateLayout();
 </script>
 </body>
